@@ -1,8 +1,24 @@
 from fastapi import FastAPI
+from routes import query
+from fastapi.middleware.cors import CORSMiddleware
+from openrouter_service import perguntar_llm
+from fastapi.staticfiles import StaticFiles
 import sqlite3
 import os
 
 app = FastAPI()
+app.mount("/audios", StaticFiles(directory="audios"), name="audios")
+
+# CORS (tem que vir antes das rotas)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # permite qualquer origem (ok para TCC)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+app.include_router(query.router)
+
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "..", "database", "produtos.db")
@@ -51,3 +67,34 @@ def buscar_produto(nome: str):
     produtos_formatados = [formatar_produto(produto) for produto in produtos]
 
     return {"resultado": produtos_formatados}
+
+@app.get("/perguntar-ia")
+def perguntar_ia(pergunta: str):
+    conn = conectar_bd()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT * FROM produtos WHERE nome LIKE ?",
+        ('%' + pergunta + '%',)
+    )
+
+    produtos = cursor.fetchall()
+    conn.close()
+
+    if not produtos:
+        contexto = "Nenhum produto encontrado."
+    else:
+        linhas = []
+        for p in produtos:
+            linhas.append(
+                f"Nome: {p[1]} | Categoria: {p[2]} | Preço: {p[3]} | Descrição: {p[4]} | Estoque: {p[5]}"
+            )
+
+        contexto = "\n".join(linhas)
+
+    resposta = perguntar_llm(pergunta, contexto)
+
+    return {
+        "pergunta": pergunta,
+        "resposta": resposta
+    }
