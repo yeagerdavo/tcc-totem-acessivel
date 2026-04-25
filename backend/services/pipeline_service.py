@@ -1,14 +1,13 @@
 import sqlite3
 import os
+from openrouter_service import classificar_intencao, perguntar_llm
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "..", "..", "database", "produtos.db")
 
 memoria = {
     "ultimo_produto": None,
-    "aguardando_localizacao": False
 }
-
 
 def conectar_bd():
     return sqlite3.connect(DB_PATH)
@@ -31,127 +30,93 @@ def formatar_produto(produto):
         "descricao": produto[12]
     }
 
+def formatar_produto_para_contexto(p):
+    return (
+        f"Nome: {p['nome']} | Preço: R${p['preco']:.2f} | "
+        f"Setor: {p['setor']} | Corredor: {p['corredor']} | Prateleira: {p['prateleira']} | "
+        f"Estoque: {p['estoque']} | Descrição: {p['descricao']} | "
+        f"Cor: {p['cor']} | Tamanho: {p['tamanho']} | Marca: {p['marca']}"
+    )
 
-def buscar_produtos(texto):
-    texto = texto.lower()
-
+def buscar_produtos_sql(palavras_chave):
+    if not palavras_chave:
+        return []
+        
     conn = conectar_bd()
     cursor = conn.cursor()
-
-    cursor.execute("SELECT * FROM produtos")
+    
+    colunas = ["nome", "categoria", "tipo", "cor", "marca", "descricao"]
+    
+    # 1. Tenta AND (exige que todas as palavras estejam em alguma coluna do produto)
+    clausulas_and = []
+    parametros_and = []
+    
+    for palavra in palavras_chave:
+        clausula_or_interna = []
+        for col in colunas:
+            clausula_or_interna.append(f"{col} LIKE ?")
+            parametros_and.append(f"%{palavra}%")
+        
+        clausulas_and.append("(" + " OR ".join(clausula_or_interna) + ")")
+        
+    query_and = f"SELECT * FROM produtos WHERE {' AND '.join(clausulas_and)}"
+    
+    cursor.execute(query_and, parametros_and)
     produtos = cursor.fetchall()
+    
+    # 2. Se não achou nada, tenta OR (relaxa a busca, basta ter uma das palavras)
+    if not produtos:
+        clausulas_or = []
+        parametros_or = []
+        for palavra in palavras_chave:
+            for col in colunas:
+                clausulas_or.append(f"{col} LIKE ?")
+                parametros_or.append(f"%{palavra}%")
+                
+        query_or = f"SELECT * FROM produtos WHERE {' OR '.join(clausulas_or)}"
+        cursor.execute(query_or, parametros_or)
+        produtos = cursor.fetchall()
 
     conn.close()
-
-    encontrados = []
-
-    for p in produtos:
-        item = formatar_produto(p)
-
-        score = 0
-
-        campos = [
-            item["nome"],
-            item["categoria"],
-            item["tipo"],
-            item["cor"],
-            item["tamanho"],
-            item["marca"]
-        ]
-
-        for campo in campos:
-            if campo and campo.lower() in texto:
-                score += 3
-
-        for palavra in texto.split():
-            for campo in campos:
-                if campo and palavra in campo.lower():
-                    score += 1
-
-        if score > 0:
-            item["score"] = score
-            encontrados.append(item)
-
-    encontrados.sort(key=lambda x: x["score"], reverse=True)
-
-    return encontrados
-
-
-def responder_localizacao():
-    produto = memoria["ultimo_produto"]
-
-    if not produto:
-        return {
-            "resposta": "Nenhum produto foi consultado.",
-            "resultados": []
-        }
-
-    memoria["aguardando_localizacao"] = False
-
-    resposta = (
-        f"{produto['nome']} está no setor {produto['setor']}, "
-        f"corredor {produto['corredor']}, "
-        f"{produto['prateleira']}."
-    )
-
-    return {
-        "resposta": resposta,
-        "resultados": [produto]
-    }
-
+    
+    return [formatar_produto(p) for p in produtos]
 
 def pipeline_processar(pergunta):
+    print("Classificando intenção...")
+    analise = classificar_intencao(pergunta)
+    intencao = analise.get("intencao", "OUTROS")
+    palavras = analise.get("palavras_chave", [])
+    
+    print(f"Intenção: {intencao} | Palavras: {palavras}")
+    
+    if intencao == "NOVA_BUSCA":
+        resultados = buscar_produtos_sql(palavras)
+        
+        if resultados:
+            memoria["ultimo_produto"] = resultados[0]
+            contexto = "Produtos Encontrados:\n" + "\n".join(
+                [formatar_produto_para_contexto(p) for p in resultados[:3]]
+            )
+            resposta = perguntar_llm(pergunta, contexto)
+            return {"resposta": resposta, "resultados": resultados[:3]}
+        else:
+            contexto = "Nenhum produto foi encontrado com esses termos no banco de dados."
+            resposta = perguntar_llm(pergunta, contexto)
+            return {"resposta": resposta, "resultados": []}
 
-    texto = pergunta.lower().strip()
-
-    # resposta de contexto para localização
-    if memoria["aguardando_localizacao"]:
-
-        if (
-            "sim" in texto or
-            "claro" in texto or
-            "quero" in texto or
-            "pode" in texto or
-            "onde" in texto or
-            "aonde" in texto or
-            "localização" in texto or
-            "localizacao" in texto or
-            "me fala" in texto or
-            "me diga" in texto or
-            "quero saber" in texto
-        ):
-            return responder_localizacao()
-
-    # pergunta direta de localização
-    if (
-        "onde fica" in texto or
-        "aonde fica" in texto or
-        "onde está" in texto or
-        "aonde está" in texto or
-        "onde encontro" in texto
-    ):
-        return responder_localizacao()
-
-    resultados = buscar_produtos(texto)
-
-    if not resultados:
-        return {
-            "resposta": "Não encontrei esse produto, mas posso buscar algo parecido.",
-            "resultados": []
-        }
-
-    principal = resultados[0]
-
-    memoria["ultimo_produto"] = principal
-    memoria["aguardando_localizacao"] = True
-
-    resposta = (
-        f"Temos {principal['nome']} "
-        f"por R$ {principal['preco']:.2f}. "
-        f"Deseja saber onde encontrar?"
-    )
-
-    return {
-        "resposta": resposta,
-        "resultados": resultados[:3]
-    }
+    elif intencao == "SOBRE_PRODUTO":
+        produto_atual = memoria["ultimo_produto"]
+        
+        if produto_atual:
+            contexto = "O usuário está perguntando sobre o seguinte produto do contexto anterior:\n"
+            contexto += formatar_produto_para_contexto(produto_atual)
+            resposta = perguntar_llm(pergunta, contexto)
+            return {"resposta": resposta, "resultados": [produto_atual]}
+        else:
+            resposta = perguntar_llm(pergunta, "O usuário perguntou sobre um produto, mas nenhum produto foi buscado anteriormente.")
+            return {"resposta": resposta, "resultados": []}
+            
+    else:
+        # OUTROS (Saudações, perguntas aleatórias)
+        resposta = perguntar_llm(pergunta, "O usuário não está buscando um produto. Responda naturalmente e, se fugir do tema, redirecione para o supermercado/loja.")
+        return {"resposta": resposta, "resultados": []}
