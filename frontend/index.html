@@ -92,6 +92,10 @@ let sessaoAtiva = false;
 let botao = document.getElementById("botao");
 let streamGlobal = null;
 
+// TODO: Quando você subir na nuvem, mude esta URL para a URL do seu backend no Render
+// Exemplo: const BACKEND_URL = "https://totem-acessivel.onrender.com";
+const BACKEND_URL = "http://127.0.0.1:8000";
+
 function encerrarSessao(){
 
     sessaoAtiva = false;
@@ -153,7 +157,7 @@ async function conversar(){
 
         try{
 
-            const resposta = await fetch("http://127.0.0.1:8000/query-audio", {
+            const resposta = await fetch(`${BACKEND_URL}/query-audio`, {
                 method:"POST",
                 body:formData
             });
@@ -181,24 +185,27 @@ async function conversar(){
 
             const texto = data.transcricao.toLowerCase();
 
+            let encerrarAposAudio = false;
+
             if(
                 texto.includes("tchau") ||
                 texto.includes("obrigado") ||
                 texto.includes("valeu") ||
                 texto.includes("encerrar")
             ){
-                encerrarSessao();
-                return;
+                encerrarAposAudio = true;
             }
 
             if(data.audio){
 
                 const audio = new Audio(
-                    "http://127.0.0.1:8000/" + data.audio
+                    `${BACKEND_URL}/` + data.audio
                 );
 
                 audio.onended = () => {
-                    if(sessaoAtiva){
+                    if(encerrarAposAudio){
+                        encerrarSessao();
+                    } else if(sessaoAtiva){
                         document.getElementById("status").innerText = "Ouvindo...";
                         conversar();
                     }
@@ -207,7 +214,11 @@ async function conversar(){
                 audio.play();
 
             }else{
-                conversar();
+                if(encerrarAposAudio){
+                    encerrarSessao();
+                } else {
+                    conversar();
+                }
             }
 
         }catch(error){
@@ -250,7 +261,7 @@ async function conversar(){
                 silencioInicio = Date.now();
             }
 
-            if(Date.now() - silencioInicio > 5000){
+            if(Date.now() - silencioInicio > 1500){
 
                 recorder.stop();
                 return;

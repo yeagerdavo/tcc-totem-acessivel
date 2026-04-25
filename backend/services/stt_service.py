@@ -3,7 +3,7 @@ import subprocess
 import os
 
 # modelo muito mais rápido
-model = whisper.load_model("small")
+model = whisper.load_model("tiny")
 
 
 def transcrever_audio(caminho_audio):

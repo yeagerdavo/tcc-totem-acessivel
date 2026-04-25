@@ -28,22 +28,27 @@ CREATE TABLE produtos (
 """)
 
 produtos = [
+    # MASCULINO
+    ("Camiseta Básica", "Roupa", "Camiseta", "Preta", "M", "Hering", 49.90, 15, "Masculino", "1", "Arara 1", "Camiseta 100% algodão"),
+    ("Camiseta Básica", "Roupa", "Camiseta", "Branca", "G", "Hering", 49.90, 12, "Masculino", "1", "Arara 1", "Camiseta 100% algodão"),
+    ("Calça Jeans Slim", "Roupa", "Calça", "Azul", "42", "Levi's", 199.90, 8, "Masculino", "2", "Prateleira 1", "Calça jeans com elastano"),
+    ("Jaqueta de Couro", "Roupa", "Jaqueta", "Preta", "G", "Zara", 359.90, 3, "Masculino", "3", "Arara 2", "Jaqueta de couro sintético"),
+    ("Bermuda Sarja", "Roupa", "Bermuda", "Cáqui", "40", "Renner", 89.90, 10, "Masculino", "2", "Prateleira 2", "Bermuda de sarja confortável"),
+    ("Camisa Polo", "Roupa", "Polo", "Azul Marinho", "M", "Lacoste", 249.90, 5, "Masculino", "1", "Arara 3", "Polo clássica"),
 
-# ROUPAS
-("Camisa Dry Fit", "Roupa", "Treino", "Preta", "GG", "Nike", 79.90, 8, "Esportivo", "2", "Arara 4", "Camisa esportiva respirável"),
-("Camisa Dry Fit", "Roupa", "Treino", "Azul", "GG", "Nike", 79.90, 6, "Esportivo", "2", "Arara 4", "Camisa esportiva respirável"),
-("Bermuda Running", "Roupa", "Treino", "Preta", "G", "Adidas", 89.90, 5, "Esportivo", "2", "Arara 5", "Bermuda leve esportiva"),
+    # FEMININO
+    ("Vestido Floral", "Roupa", "Vestido", "Vermelho/Branco", "M", "Farm", 289.90, 6, "Feminino", "4", "Arara 4", "Vestido longo de viscose"),
+    ("Blusa Tricô", "Roupa", "Blusa", "Rosa", "P", "Zara", 129.90, 8, "Feminino", "5", "Prateleira 3", "Blusa de tricô leve"),
+    ("Calça Pantalona", "Roupa", "Calça", "Preta", "38", "Renner", 149.90, 10, "Feminino", "4", "Arara 5", "Calça de alfaiataria"),
+    ("Saia Midi Plissada", "Roupa", "Saia", "Verde", "M", "Amaro", 119.90, 4, "Feminino", "4", "Prateleira 4", "Saia elegante plissada"),
+    ("Jaqueta Jeans", "Roupa", "Jaqueta", "Azul Claro", "M", "Levi's", 259.90, 5, "Feminino", "5", "Arara 6", "Jaqueta jeans clássica"),
+    ("Cropped Básico", "Roupa", "Cropped", "Branco", "P", "Hering", 39.90, 20, "Feminino", "4", "Arara 7", "Cropped canelado"),
 
-# MERCEARIA
-("Arroz 5kg", "Alimento", "Arroz", "Branco", "5kg", "Camil", 28.90, 15, "Mercearia", "3", "Prateleira 2", "Arroz tipo 1"),
-("Feijão Carioca 1kg", "Alimento", "Feijão", "Bege", "1kg", "Kicaldo", 8.90, 22, "Mercearia", "3", "Prateleira 3", "Feijão carioca"),
-("Café 500g", "Alimento", "Café", "N/A", "500g", "Pilão", 16.90, 19, "Mercearia", "4", "Prateleira 1", "Café torrado"),
-
-# LIMPEZA
-("Sabão em Pó 1kg", "Limpeza", "Sabão", "Azul", "1kg", "OMO", 12.90, 16, "Limpeza", "6", "Prateleira 2", "Sabão em pó"),
-
-# BEBIDAS
-("Água Mineral 500ml", "Bebida", "Água", "Transparente", "500ml", "Crystal", 3.50, 100, "Bebidas", "1", "Geladeira 1", "Água sem gás")
+    # ESPORTIVO
+    ("Legging Academia", "Roupa", "Legging", "Preta", "M", "Nike", 129.90, 15, "Esportivo", "6", "Arara 8", "Legging cintura alta"),
+    ("Top Fit", "Roupa", "Top", "Rosa", "P", "Adidas", 89.90, 12, "Esportivo", "6", "Arara 8", "Top com alta sustentação"),
+    ("Camisa Dry Fit", "Roupa", "Treino", "Preta", "GG", "Nike", 79.90, 8, "Esportivo", "7", "Arara 9", "Camisa esportiva respirável"),
+    ("Bermuda Running", "Roupa", "Treino", "Cinza", "G", "Adidas", 89.90, 5, "Esportivo", "7", "Arara 9", "Bermuda leve esportiva")
 ]
 
 cursor.executemany("""

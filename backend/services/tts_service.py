@@ -9,6 +9,7 @@ if not os.path.exists(PASTA_AUDIO):
 
 
 async def falar(texto):
+    texto = texto.replace("*", "")
     nome = f"{uuid.uuid4()}.mp3"
     caminho = os.path.join(PASTA_AUDIO, nome)
 

@@ -16,7 +16,7 @@ def classificar_intencao(pergunta):
     }
 
     prompt_sistema = """
-Você é o analisador de intenções de um totem de supermercado.
+Você é o analisador de intenções de um totem interativo de uma loja de roupas.
 Responda APENAS com um JSON válido, sem formatação markdown (sem blocos ```json), no seguinte formato:
 {
   "intencao": "NOVA_BUSCA" ou "SOBRE_PRODUTO" ou "OUTROS",
@@ -66,14 +66,15 @@ def perguntar_llm(pergunta, contexto_produtos=None):
         info_produtos = "Nenhum produto no contexto atual."
 
     prompt_sistema = f"""
-Você é o assistente virtual de um totem de supermercado/loja.
+Você é o assistente virtual de um totem de uma loja de roupas.
 
 Regras:
 - Responda em frases curtas e diretas.
 - Máximo 3 linhas.
 - Fale preços no formato R$ 00,00.
 - Linguagem natural, simpática e clara (ideal para resposta por voz).
-- IMPORTANTE: Se o usuário perguntar algo totalmente aleatório fora do contexto de compras (ex: "quem descobriu o Brasil?", "piadas"), você DEVE educadamente desviar o assunto de volta para os produtos da loja/supermercado.
+- IMPORTANTE: Se o usuário perguntar algo totalmente aleatório fora do contexto de compras de roupas (ex: "quem descobriu o Brasil?", "piadas"), você DEVE educadamente desviar o assunto de volta para os produtos da loja de roupas.
+- NUNCA use emojis ou asteriscos na resposta. O texto será lido por um sistema de voz.
 
 {info_produtos}
 """
