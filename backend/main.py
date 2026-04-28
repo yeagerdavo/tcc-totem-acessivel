@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from routes import query
 from fastapi.middleware.cors import CORSMiddleware
-from openrouter_service import perguntar_llm
+from services.llm_service import perguntar_llm
 from fastapi.staticfiles import StaticFiles
 import sqlite3
 import os
@@ -69,7 +69,7 @@ def buscar_produto(nome: str):
     return {"resultado": produtos_formatados}
 
 @app.get("/perguntar-ia")
-def perguntar_ia(pergunta: str):
+async def perguntar_ia(pergunta: str):
     conn = conectar_bd()
     cursor = conn.cursor()
 
@@ -92,7 +92,7 @@ def perguntar_ia(pergunta: str):
 
         contexto = "\n".join(linhas)
 
-    resposta = perguntar_llm(pergunta, contexto)
+    resposta = await perguntar_llm(pergunta, contexto)
 
     return {
         "pergunta": pergunta,

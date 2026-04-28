@@ -1,6 +1,6 @@
 import sqlite3
 import os
-from openrouter_service import classificar_intencao, perguntar_llm
+from services.llm_service import classificar_intencao, perguntar_llm
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "..", "..", "database", "produtos.db")
@@ -81,9 +81,9 @@ def buscar_produtos_sql(palavras_chave):
     
     return [formatar_produto(p) for p in produtos]
 
-def pipeline_processar(pergunta):
+async def pipeline_processar(pergunta):
     print("Classificando intenção...")
-    analise = classificar_intencao(pergunta)
+    analise = await classificar_intencao(pergunta)
     intencao = analise.get("intencao", "OUTROS")
     palavras = analise.get("palavras_chave", [])
     
@@ -97,11 +97,11 @@ def pipeline_processar(pergunta):
             contexto = "Produtos Encontrados:\n" + "\n".join(
                 [formatar_produto_para_contexto(p) for p in resultados[:3]]
             )
-            resposta = perguntar_llm(pergunta, contexto)
+            resposta = await perguntar_llm(pergunta, contexto)
             return {"resposta": resposta, "resultados": resultados[:3]}
         else:
             contexto = "Nenhum produto foi encontrado com esses termos no banco de dados."
-            resposta = perguntar_llm(pergunta, contexto)
+            resposta = await perguntar_llm(pergunta, contexto)
             return {"resposta": resposta, "resultados": []}
 
     elif intencao == "SOBRE_PRODUTO":
@@ -110,13 +110,13 @@ def pipeline_processar(pergunta):
         if produto_atual:
             contexto = "O usuário está perguntando sobre o seguinte produto do contexto anterior:\n"
             contexto += formatar_produto_para_contexto(produto_atual)
-            resposta = perguntar_llm(pergunta, contexto)
+            resposta = await perguntar_llm(pergunta, contexto)
             return {"resposta": resposta, "resultados": [produto_atual]}
         else:
-            resposta = perguntar_llm(pergunta, "O usuário perguntou sobre um produto, mas nenhum produto foi buscado anteriormente.")
+            resposta = await perguntar_llm(pergunta, "O usuário perguntou sobre um produto, mas nenhum produto foi buscado anteriormente.")
             return {"resposta": resposta, "resultados": []}
             
     else:
         # OUTROS (Saudações, perguntas aleatórias)
-        resposta = perguntar_llm(pergunta, "O usuário não está buscando um produto. Responda naturalmente e, se fugir do tema, redirecione para o supermercado/loja.")
+        resposta = await perguntar_llm(pergunta, "O usuário não está buscando um produto. Responda naturalmente e, se fugir do tema, redirecione para o supermercado/loja.")
         return {"resposta": resposta, "resultados": []}

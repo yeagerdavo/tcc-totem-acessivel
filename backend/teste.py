@@ -1,4 +1,4 @@
-from openrouter_service import perguntar_llm
+from services.llm_service import perguntar_llm
 
 print("Iniciando teste...")
 

@@ -1,37 +1,42 @@
-import whisper
-import subprocess
 import os
+import httpx
+from dotenv import load_dotenv
 
-# modelo muito mais rápido
-model = whisper.load_model("tiny")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ENV_PATH = os.path.join(BASE_DIR, "..", ".env")
+load_dotenv(ENV_PATH)
 
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-def transcrever_audio(caminho_audio):
+async def transcrever_audio(caminho_audio):
+    if not GROQ_API_KEY:
+        print("Erro: GROQ_API_KEY não configurada no .env")
+        return ""
 
-    caminho_convertido = "audio_convertido.wav"
+    url = "https://api.groq.com/openai/v1/audio/transcriptions"
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}"
+    }
 
-    subprocess.run([
-        "ffmpeg",
-        "-y",
-        "-i", caminho_audio,
-        "-ar", "16000",
-        "-ac", "1",
-        caminho_convertido
-    ],
-    stdout=subprocess.DEVNULL,
-    stderr=subprocess.DEVNULL
-    )
+    try:
+        async with httpx.AsyncClient() as client:
+            with open(caminho_audio, "rb") as f:
+                # O Groq suporta webm diretamente, não precisamos de ffmpeg!
+                files = {"file": (os.path.basename(caminho_audio), f, "audio/webm")}
+                data = {
+                    "model": "whisper-large-v3-turbo",
+                    "language": "pt"
+                }
 
-    print("Áudio convertido:", os.path.exists(caminho_convertido))
+                response = await client.post(url, headers=headers, data=data, files=files, timeout=30.0)
 
-    result = model.transcribe(
-        caminho_convertido,
-        language="pt",
-        fp16=False
-    )
-
-    texto = result["text"].strip()
-
-    print("Texto:", texto)
-
-    return texto
+                if response.status_code == 200:
+                    texto = response.json().get("text", "").strip()
+                    print("Texto STT (Groq):", texto)
+                    return texto
+                else:
+                    print(f"Erro Groq API ({response.status_code}):", response.text)
+                    return ""
+    except Exception as e:
+        print("Erro na transcrição via Groq:", e)
+        return ""

@@ -9,8 +9,8 @@ router = APIRouter()
 
 
 @router.get("/query-text")
-def query_text(q: str):
-    return pipeline_processar(q)
+async def query_text(q: str):
+    return await pipeline_processar(q)
 
 
 @router.post("/query-audio")
@@ -27,14 +27,25 @@ async def query_audio(audio: UploadFile = File(...)):
 
     # STT
     inicio_stt = time.time()
-    texto = transcrever_audio(caminho)
+    texto = await transcrever_audio(caminho)
     fim_stt = time.time()
 
     print("STT concluído:", round(fim_stt - inicio_stt, 2), "seg")
+    
+    if not texto:
+        # Se não ouviu nada ou deu erro, encerra rápido
+        if os.path.exists(caminho):
+            os.remove(caminho)
+        return {
+            "transcricao": "Não entendi.",
+            "resposta": "Desculpe, não consegui ouvir direito. Pode repetir?",
+            "resultados": [],
+            "audio": ""
+        }
 
     # IA / Pipeline
     inicio_ia = time.time()
-    resultado = pipeline_processar(texto)
+    resultado = await pipeline_processar(texto)
     fim_ia = time.time()
 
     print("IA concluída:", round(fim_ia - inicio_ia, 2), "seg")
